@@ -22,6 +22,7 @@ from itertools import count
 from collections import deque
 import matplotlib.pyplot as plt
 
+
 sys.path.append('/home/oscar/Dropbox/SMARTS')
 from smarts.core.agent import AgentSpec
 from smarts.env.hiway_env import HiWayEnv
@@ -29,10 +30,13 @@ from smarts.core.controllers import ActionSpaceType
 from smarts.core.agent_interface import AgentInterface
 from smarts.core.agent_interface import NeighborhoodVehicles, RGB, OGM, DrivableAreaGridMap, Waypoints
 
+
 from drl_agent import DRL
 from keyboard import HumanKeyboardAgent
 from utils_ import soft_update, hard_update
 from authority_allocation import Arbitrator
+import sys
+sys.path.append('./SMARTS')
 
 def plot_animation_figure(epoc):
     plt.figure()
@@ -110,7 +114,7 @@ def evaluate(env_eval, agent, eval_episodes=10, epoch=0):
        
             if t <= frame_skip:
                 ##### Select and perform an action #####
-                a = agent.choose_action(np.array(s), action_list[-1], evaluate=True)
+                a, llm_action = agent.choose_action(np.array(s), action_list[-1], evaluate=True)
                 action = action_adapter(a)
                 
                 ##### Safety Mask #####
@@ -136,7 +140,7 @@ def evaluate(env_eval, agent, eval_episodes=10, epoch=0):
                     done = True
                     print('Done')
                 
-                r = reward_adapter(next_state[AGENT_ID], pos_list, a, engage, done=done)
+                r = reward_adapter(next_state[AGENT_ID], pos_list, a, engage, done=done, llm_action=llm_action)
                 pos_list.append(next_state[AGENT_ID].ego_vehicle_state.position[:2])
                 action_list.append(a)       
                 s = s_
@@ -157,7 +161,7 @@ def evaluate(env_eval, agent, eval_episodes=10, epoch=0):
                 continue
        
             ##### Select and perform an action ######
-            a = agent.choose_action(np.array(s), action_list[-1], evaluate=True)
+            a, llm_action = agent.choose_action(np.array(s), action_list[-1], evaluate=True)
             entropy_rl = 0.0
             guidance = False
             
@@ -204,7 +208,7 @@ def evaluate(env_eval, agent, eval_episodes=10, epoch=0):
                 done = True
                 print('Done')
             
-            r = reward_adapter(next_state[AGENT_ID], pos_list, a, engage, done=done)
+            r = reward_adapter(next_state[AGENT_ID], pos_list, a, engage, done=done, llm_action=llm_action)
             pos_list.append(next_state[AGENT_ID].ego_vehicle_state.position[:2])
        
             lane_name = info[AGENT_ID]['env_obs'].ego_vehicle_state.lane_id
@@ -269,46 +273,56 @@ def evaluate(env_eval, agent, eval_episodes=10, epoch=0):
 def observation_adapter(env_obs):
     global states
 
-    new_obs = env_obs.top_down_rgb[1]# / 255.0
-    states[:, :, 0:3] = states[:, :, 3:6]
-    states[:, :, 3:6] = states[:, :, 6:9]
-    states[:, :, 6:9] = new_obs
-    ogm = env_obs.occupancy_grid_map[1] 
-    drivable_area = env_obs.drivable_area_grid_map[1]
+    # 관측 상태 비워두기 또는 기본값
+    states = np.zeros(shape=(screen_size, screen_size, 9), dtype=np.uint8)
 
-    if env_obs.events.collisions or env_obs.events.reached_goal:
-        states = np.zeros(shape=(screen_size, screen_size, 9))
-
-    return np.array(states, dtype=np.uint8)
+    return states
 
 # reward function
-def reward_adapter(env_obs, pos_list, action, engage=False, done=False):
+import numpy as np
+
+# ✅ 안전하게 행동 ID 추출하는 함수
+def extract_action_id(x):
+    if isinstance(x, (int, np.integer, float, np.floating)):
+        return int(x)
+    elif isinstance(x, np.ndarray):
+        if x.size == 1:
+            return int(x.item())
+        elif x.ndim == 1:
+            return int(np.argmax(x))  # 확률 벡터로 간주
+        else:
+            raise ValueError(f"Unsupported array shape: {x.shape}")
+    else:
+        raise TypeError(f"Unsupported type for action: {type(x)}")
+
+# ✅ 보상 함수
+def reward_adapter(env_obs, pos_list, action, engage=False, done=False, llm_action=None):
     ego_obs = env_obs.ego_vehicle_state
     ego_pos = ego_obs.position[:2]
     lane_name = ego_obs.lane_id
     lane_id = ego_obs.lane_index
     ref = env_obs.waypoint_paths
-    
+
     ##### For Scratch ######
-    heuristic = ego_obs.speed * 0.01 
-    
-    ###### Ternimal Reward #######
+    heuristic = ego_obs.speed * 0.01
+
+    ###### Terminal Reward #######
     if done and not env_obs.events.reached_max_episode_steps and \
        not env_obs.events.off_road and not bool(len(env_obs.events.collisions)):
         print('Good Job!')
-        goal = 3.0 
+        goal = 3.0
     else:
         goal = 0.0
 
     if env_obs.events.off_road:
         print('\n Off Road!')
-        off_road = - 7.0
+        off_road = -7.0
     else:
         off_road = 0.0
 
     if env_obs.events.collisions:
         print('\n crashed')
-        crash = - 7.0
+        crash = -7.0
     else:
         crash = 0.0
 
@@ -317,28 +331,40 @@ def reward_adapter(env_obs, pos_list, action, engage=False, done=False):
     else:
         guidance = 0.0
 
-    ###### Performance Penatly ######
+    ###### Performance Penalty ######
     if len(ref[lane_id]) > 1:
         ref_pos_1st = ref[lane_id][0].pos
         ref_pos_2nd = ref[lane_id][1].pos
         ref_dir_vec = ref_pos_2nd - ref_pos_1st
         lat_error = signedDistToLine(ego_pos, ref_pos_1st, ref_dir_vec)
-        
+
         ref_heading = ref[lane_id][0].heading
         ego_heading = ego_obs.heading
         heading_error = ref_heading - ego_heading
     else:
-        lat_error= 0.0
+        lat_error = 0.0
         heading_error = 0.0
 
-    performance = - 0.01 * lat_error**2 - 0.1 * heading_error**2
+    performance = -0.01 * lat_error**2 - 0.1 * heading_error**2
 
-    ###### For Scratch ######
+    ##### Shoulder Penalty #####
     if env_obs.events.on_shoulder:
         print('\n on_shoulder')
         performance -= 0.1
 
-    return heuristic + off_road + crash + performance + guidance + goal
+    reward = heuristic + off_road + crash + performance + guidance + goal
+
+    ##### ✅ LLM과 DRL 행동 일치 시 보상 추가 #####
+    LLM_MATCH_REWARD = 1.0
+    if llm_action is not None:
+        try:
+            if extract_action_id(llm_action) == extract_action_id(action):
+                reward += LLM_MATCH_REWARD
+        except Exception as e:
+            print("[WARN] LLM action 비교 중 오류:", e)
+
+    return reward
+
 
 # action space
 def action_adapter(action): 
@@ -359,6 +385,19 @@ def action_adapter(action):
 
 def info_adapter(observation, reward, info):
     return info
+
+def construct_sce(obs):
+    ego = obs.ego_vehicle_state
+
+    lane_offset = ego.position[0]
+
+    return {
+        "ego_speed": ego.speed,
+        "lane_offset": lane_offset,
+        "num_nearby_vehicles": len(obs.neighborhood_vehicle_states),
+        "acceleration": 0.0  # 또는 나중에 계산할 수 있게 패딩
+    }
+
 
 def interaction(COUNTER):
     save_threshold = 3.0
@@ -394,7 +433,15 @@ def interaction(COUNTER):
                 break
 
             ##### Select and perform an action ######
-            rl_a = agent.choose_action(np.array(s), action_list[-1])
+            rl_a, llm_action = agent.choose_action(
+                np.array(s),
+                action_list[-1],
+                obs=obs,
+                arbitrator=arbitrator,
+                current_scenario="highway/overtake",
+                sce=construct_sce(obs),
+                human_action=human.act() if human.intervention and epoc <= INTERMITTENT_THRESHOLD else None
+            )
             guidance = False
             
             ##### Human-in-the-loop #######
@@ -451,7 +498,7 @@ def interaction(COUNTER):
                 done = True
                 print('Done')
             
-            r = reward_adapter(next_state[AGENT_ID], pos_list, a, engage=engage, done=done)
+            r = reward_adapter(next_state[AGENT_ID], pos_list, a, engage=engage, done=done, llm_action=llm_action)
             pos_list.append(curr_pos)
 
             ##### Store the transition in memory ######
@@ -494,6 +541,7 @@ def interaction(COUNTER):
                                       str(MAX_NUM_EPOC) + '_step' + str(MAX_NUM_STEPS) + '_seed'
                                       + str(seed)+'_'+env_name+'_criticnet.pkl'))
                             save_threshold = avg_reward
+                guidance_rate = 100 * guidance_count / (t + 1)
 
                 print('\n|Epoc:', epoc,
                       '\n|Step:', t,
@@ -508,8 +556,9 @@ def interaction(COUNTER):
                       '\n|Algo:', name,
                       '\n|seed:', seed,
                       '\n|Env:', env_name)
-    
-                s = env.reset()
+                obs = env.reset()          # ✅ dict로 받아서
+                obs = obs[AGENT_ID]  
+                s = observation_adapter(obs) 
                 reward_total = 0
                 error = 0
                 pbar.update(1)
@@ -613,12 +662,12 @@ if __name__ == "__main__":
     
         ##### Define agent interface #######
         agent_interface = AgentInterface(
+            
             max_episode_steps=MAX_NUM_STEPS,
             waypoints=Waypoints(50),
             neighborhood_vehicles=NeighborhoodVehicles(radius=100),
-            rgb=RGB(screen_size, screen_size, view/screen_size),
-            ogm=OGM(screen_size, screen_size, view/screen_size),
-            drivable_area_grid_map=DrivableAreaGridMap(screen_size, screen_size, view/screen_size),
+           
+           
             action=ActionSpaceType.Continuous,
         )
         
@@ -641,8 +690,17 @@ if __name__ == "__main__":
             envisionless = False
         
         scenario_path = [scenario]
-        env = HiWayEnv(scenarios=scenario_path, agent_specs={AGENT_ID: agent_spec},
-                       headless=False, visdom=False, sumo_headless=True, seed=seed)
+        env = HiWayEnv(
+    scenarios=scenario_path,
+    agent_specs={AGENT_ID: agent_spec},
+    headless=False,
+    visdom=False,
+    sumo_headless=True,
+    seed=seed,
+   
+)
+
+
         env.observation_space = OBSERVATION_SPACE
         env.action_space = ACTION_SPACE
         env.agent_id = AGENT_ID

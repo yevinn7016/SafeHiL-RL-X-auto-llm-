@@ -11,10 +11,15 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.optim import Adam
+import re
+
 
 from utils_ import soft_update, hard_update
 from Network import GaussianPolicy, QNetwork, DeterministicPolicy
 from cpprb import PrioritizedReplayBuffer
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '../In-context_Learning_for_Automated_Driving/Auto_Driving_Highway'))
+from ask_llm import send_to_chatgpt
 
 class DRL(object):
     def __init__(self, seed, action_dim, state_dim, pstate_dim, policy_type, critic_type, 
@@ -91,20 +96,91 @@ class DRL(object):
         
         self.policy_optim = Adam(self.policy.parameters(), lr=self.lr_a)
 
-    def choose_action(self, istate, pstate, evaluate=False):
+    def choose_action(self, istate, pstate, obs=None, arbitrator=None, current_scenario=None, sce=None, human_action=None, evaluate=False, llm_conf_default=0.3):
+        """
+        DRL, LLM, Human의 행동을 받아 동적 가중치(권한)로 최종 행동을 결정
+        - arbitrator.authority()로 DRL/Human 가중치 계산
+        - LLM confidence 기반으로 LLM 가중치 계산
+        - 세 weight는 합이 1이 되도록 정규화
+        - current_scenario, sce가 없으면 LLM 미호출
+        - human_action 없으면 DRL action 사용
+        - evaluate 모드 유지
+        """
+        # 1. DRL action
         if istate.ndim < 4:
-            istate = torch.FloatTensor(istate).float().unsqueeze(0).permute(0,3,1,2).to(self.device)
-            pstate = torch.FloatTensor(pstate).float().unsqueeze(0).to(self.device)
+            istate_t = torch.FloatTensor(istate).float().unsqueeze(0).permute(0,3,1,2).to(self.device)
+            pstate_t = torch.FloatTensor(pstate).float().unsqueeze(0).to(self.device)
         else:
-            istate = torch.FloatTensor(istate).float().permute(0,3,1,2).to(self.device)
-            pstate = torch.FloatTensor(pstate).float().to(self.device)
-        
+            istate_t = torch.FloatTensor(istate).float().permute(0,3,1,2).to(self.device)
+            pstate_t = torch.FloatTensor(pstate).float().to(self.device)
         if evaluate is False:
-            action, _, _ = self.policy.sample([istate, pstate])
+            drl_action, _, _ = self.policy.sample([istate_t, pstate_t])
         else:
-            _, _, action = self.policy.sample([istate, pstate])
+            _, _, drl_action = self.policy.sample([istate_t, pstate_t])
+        drl_action = drl_action.detach().squeeze(0).cpu().numpy()
 
-        return action.detach().squeeze(0).cpu().numpy()
+        # 2. Human action (입력값이 없으면 DRL action 사용)
+        if human_action is None:
+            human_action = drl_action
+
+        # 3. DRL/Human 가중치 계산 (arbitrator 필요)
+        if arbitrator is not None and obs is not None:
+            rl_weight_raw = arbitrator.authority(obs, drl_action, human_action)
+            human_weight_raw = 1 - rl_weight_raw
+        else:
+            rl_weight_raw, human_weight_raw = 0.5, 0.5
+        last_action = drl_action
+        llm_result = send_to_chatgpt(last_action, current_scenario, sce)
+        # 4. LLM action 및 confidence 계산
+        llm_result = None
+        llm_action = drl_action
+        llm_conf = llm_conf_default
+
+        if current_scenario is not None and sce is not None:
+            llm_result = send_to_chatgpt(drl_action, current_scenario, sce)
+
+        if llm_result is not None and "content" in llm_result:
+            llm_text = llm_result["content"]
+    # 정규표현식으로 decision/LLM confidence 추출
+        else:
+            print("[ERROR] llm_result is None or missing 'content' key:", llm_result)
+            llm_text = ""
+
+
+            match = re.search(r'"decision":\s*{["\']?([^"\'}]+)["\']?}', llm_text)
+            llm_action_str = match.group(1) if match else "IDLE"
+            ACTIONS_ALL = {0: 'LANE_LEFT', 1: 'IDLE', 2: 'LANE_RIGHT', 3: 'FASTER', 4: 'SLOWER'}
+            llm_action = [k for k, v in ACTIONS_ALL.items() if v == llm_action_str]
+            llm_action = llm_action[0] if llm_action else 1  # 기본값 IDLE
+            # confidence 추출 (예: "confidence": 0.7)
+            conf_match = re.search(r'"confidence":\s*([0-9.]+)', llm_text)
+
+            if conf_match:
+                llm_conf = float(conf_match.group(1))
+        # LLM 가중치
+        llm_weight = llm_conf
+
+        # 5. 세 weight 정규화
+        total = rl_weight_raw + human_weight_raw + llm_weight
+        if      total > 0:
+            rl_weight = rl_weight_raw / total
+            human_weight = human_weight_raw / total
+            llm_weight = llm_weight / total
+        else:
+            rl_weight, human_weight, llm_weight = 0.4, 0.4, 0.2
+
+        # 6. 최종 행동 산출 (이산 action space 기준)
+        final_action = (
+            rl_weight * drl_action +
+            llm_weight * llm_action +
+            human_weight * human_action
+        )
+        if isinstance(final_action, float) or isinstance(final_action, np.floating):
+            final_action = int(round(final_action))
+        else:
+            final_action = np.round(final_action).astype(int)
+
+        return final_action, llm_action
 
     def learn_guidence(self, batch_size=64):
         agent_buffer_size = self.replay_buffer.get_stored_size()
