@@ -1,0 +1,16 @@
+{
+  "features": {
+    "map": "map.net.xml",
+    "traffic": "traffic/basic.rou.xml"
+  },
+  "agents": {
+    "Agent-007": {
+      "vehicle": "car",
+      "mission": {
+        "route": ["E0"],
+        "start": [50.0, 50.0],
+        "goal": [350.0, 50.0]
+      }
+    }
+  }
+}

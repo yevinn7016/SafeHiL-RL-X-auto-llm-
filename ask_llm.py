@@ -1,13 +1,13 @@
-import openai
 import numpy as np
 import json
+import openai
 
 import pre_prompt
 
 # API 키 불러오기
 with open('MY_KEY.txt', 'r', encoding='utf-8-sig') as f:
     api_key = f.read().strip()
-openai.api_key = api_key  # ← 변경된 부분
+openai.api_key = api_key
 
 ACTIONS_ALL = {
     0: 'LANE_LEFT',
@@ -69,10 +69,7 @@ def send_to_chatgpt(last_action, current_scenario, sce):
                    "Here is the current scenario:\n"
                    f"{current_scenario}\n\n")
 
-    # ChatCompletion 생성 (구버전 방식)
-   
-   
-    # ChatCompletion 생성 (구버전 방식)
+    # ChatCompletion 생성 (openai 방식)
     completion = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
@@ -80,7 +77,6 @@ def send_to_chatgpt(last_action, current_scenario, sce):
             {"role": "user", "content": user_prompt}
         ]
     )
-
     llm_result = completion.choices[0].message
     llm_text = llm_result.content.strip()
 

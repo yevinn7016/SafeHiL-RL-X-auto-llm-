@@ -37,6 +37,7 @@ from utils_ import soft_update, hard_update
 from authority_allocation import Arbitrator
 import sys
 sys.path.append('./SMARTS')
+from memory_module import MemoryModule
 
 def plot_animation_figure(epoc):
     plt.figure()
@@ -440,7 +441,8 @@ def interaction(COUNTER):
                 arbitrator=arbitrator,
                 current_scenario="highway/overtake",
                 sce=construct_sce(obs),
-                human_action=human.act() if human.intervention and epoc <= INTERMITTENT_THRESHOLD else None
+                human_action=human.act() if human.intervention and epoc <= INTERMITTENT_THRESHOLD else None,
+                memory_module=memory_module  # ← 반드시 추가!
             )
             guidance = False
             
@@ -690,6 +692,8 @@ if __name__ == "__main__":
             envisionless = False
         
         scenario_path = [scenario]
+        
+
         env = HiWayEnv(
     scenarios=scenario_path,
     agent_specs={AGENT_ID: agent_spec},
@@ -697,7 +701,7 @@ if __name__ == "__main__":
     visdom=False,
     sumo_headless=True,
     seed=seed,
-   
+    
 )
 
 
@@ -722,6 +726,8 @@ if __name__ == "__main__":
         
         arbitrator = Arbitrator()
         arbitrator.shared_control = SHARED_CONTROL
+        
+        memory_module = MemoryModule()
         
         legend_bar.append('seed'+str(seed))
         
