@@ -21,6 +21,15 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '../In-context_Learning_for_Automated_Driving/Auto_Driving_Highway'))
 from ask_llm import send_to_chatgpt
 
+# --- [추가] LLM 이산 action ID를 연속 action 벡터로 매핑하는 테이블 ---
+ACTIONS_ID_TO_VEC = {
+    0: np.array([-1.0, 0.0]),   # LANE_LEFT: 좌로 조향
+    1: np.array([0.0, 0.0]),    # IDLE: 정지/유지
+    2: np.array([1.0, 0.0]),    # LANE_RIGHT: 우로 조향
+    3: np.array([0.0, 1.0]),    # FASTER: 가속
+    4: np.array([0.0, -1.0]),   # SLOWER: 감속
+}
+
 class DRL(object):
     def __init__(self, seed, action_dim, state_dim, pstate_dim, policy_type, critic_type, 
                  LR_A = 1e-3, LR_C = 1e-3, LR_ALPHA=1e-4, BUFFER_SIZE=int(2e5), 
@@ -96,7 +105,7 @@ class DRL(object):
         
         self.policy_optim = Adam(self.policy.parameters(), lr=self.lr_a)
 
-    def choose_action(self, istate, pstate, obs=None, arbitrator=None, current_scenario=None, sce=None, human_action=None, evaluate=False, llm_conf_default=0.3):
+    def choose_action(self, istate, pstate, obs=None, arbitrator=None, current_scenario=None, sce=None, human_action=None, evaluate=False, llm_conf_default=0.3, memory_module=None):
         """
         DRL, LLM, Human의 행동을 받아 동적 가중치(권한)로 최종 행동을 결정
         - arbitrator.authority()로 DRL/Human 가중치 계산
@@ -118,12 +127,87 @@ class DRL(object):
         else:
             _, _, drl_action = self.policy.sample([istate_t, pstate_t])
         drl_action = drl_action.detach().squeeze(0).cpu().numpy()
+# 2. Memory에서 유사 사례 검색 (LLM 프롬프트에 활용)
+        similar_cases = []
+        if memory_module is not None and obs is not None:
+            print(f"[DEBUG][choose_action] step={obs.step_count}, speed={obs.ego_vehicle_state.speed:.2f}, lane_id={obs.ego_vehicle_state.lane_id}")
+            similar_cases = memory_module.retrieve_similar_cases(obs, k=3)
 
-        # 2. Human action (입력값이 없으면 DRL action 사용)
+    # ✅ 간략 출력
+            print(f"[choose_action] LLM 프롬프트에 포함될 유사 사례 ({len(similar_cases)}건):")
+            for idx, case in enumerate(similar_cases, 1):
+        # 문자열로 된 obs에서 step/speed/lane 같은 값 파싱 필요시 추가
+        # 여기서는 action만 간략히 출력
+                action_str = case.get("action", "?")
+        # step과 speed, lane은 obs 안에 포함 → 필요시 추출
+                print(f"  {idx}) action={action_str}")
+
+        # 2. Human action (입력값이 없으면 DRL+LLM 동적 가중치 결합)
         if human_action is None:
-            human_action = drl_action
+            # --- [변경] Human 개입이 없는 경우: DRL과 LLM 행동을 cosine similarity 기반으로 안전하게 결합 ---
+            llm_result = None
+            llm_action = drl_action
+            llm_conf = llm_conf_default
 
-        # 3. DRL/Human 가중치 계산 (arbitrator 필요)
+            if current_scenario is not None and sce is not None:
+                llm_result = send_to_chatgpt(drl_action, current_scenario, sce)
+
+            if llm_result is not None and "content" in llm_result:
+                llm_text = llm_result["content"]
+            else:
+                print("[ERROR] llm_result is None or missing 'content' key:", llm_result)
+                llm_text = ""
+
+            match = re.search(r'"decision":\s*{["\']?([^"\'}]+)["\']?}', llm_text)
+            llm_action_str = match.group(1) if match else "IDLE"
+            ACTIONS_ALL = {0: 'LANE_LEFT', 1: 'IDLE', 2: 'LANE_RIGHT', 3: 'FASTER', 4: 'SLOWER'}
+            llm_action = [k for k, v in ACTIONS_ALL.items() if v == llm_action_str]
+            llm_action = llm_action[0] if llm_action else 1  # 기본값 IDLE
+            conf_match = re.search(r'"confidence":\s*([0-9.]+)', llm_text)
+            if conf_match:
+                llm_conf = float(conf_match.group(1))
+
+            # --- [변경] LLM action을 DRL action space에 맞는 벡터로 변환 ---
+            llm_action_vec = ACTIONS_ID_TO_VEC.get(int(llm_action), np.array([0.0, 0.0]))
+            # --- [변경] DRL과 LLM 행동의 cosine similarity 계산 (동일 차원) ---
+            drl_vec = np.array(drl_action).flatten()
+            llm_vec = llm_action_vec.flatten()
+            if drl_vec.shape != llm_vec.shape:
+                raise ValueError(f"Cannot align drl_action shape {drl_vec.shape} and llm_action_vec shape {llm_vec.shape}")
+            if np.linalg.norm(drl_vec) < 1e-8 or np.linalg.norm(llm_vec) < 1e-8:
+                cosine_sim = 0.0
+            else:
+                cosine_sim = np.dot(drl_vec, llm_vec) / (np.linalg.norm(drl_vec) * np.linalg.norm(llm_vec))
+            cosine_sim = max(0.0, cosine_sim)
+
+            threshold = 0.5  # 코사인 유사도 임계값
+            if llm_conf <= 0.2 or cosine_sim < threshold:
+                # LLM 신뢰도가 매우 낮거나, 행동 방향이 충분히 유사하지 않으면 DRL 100% 사용
+                rl_weight = 1.0
+                llm_weight = 0.0
+            else:
+                # LLM confidence와 cosine similarity를 곱해 LLM 가중치로 사용
+                llm_weight = llm_conf * cosine_sim
+                rl_weight = 1 - llm_weight
+            # 가중치 합이 1이 되도록 보장
+            total = rl_weight + llm_weight
+            rl_weight = rl_weight / total
+            llm_weight = llm_weight / total
+            human_weight = 0.0
+            # --- [변경] DRL/LLM 가중 평균으로 최종 행동 산출 ---
+            final_action = rl_weight * drl_vec + llm_weight * llm_vec
+            if isinstance(final_action, float) or isinstance(final_action, np.floating):
+                final_action = int(round(final_action))
+            else:
+                final_action = np.round(final_action).astype(float)  # 연속 action space 유지
+            # --- [추가] Memory에 현재 step 저장 (Human 개입 여부와 무관하게) ---
+            if memory_module is not None and obs is not None:
+                print(f"[DEBUG][choose_action] calling memory_module.save | "
+      f"step={obs.step_count}, speed={obs.ego_vehicle_state.speed:.2f}, lane={obs.ego_vehicle_state.lane_id}")
+
+                memory_module.save(obs, final_action, "-")
+            return final_action, llm_action
+        # --- [기존] Human 개입이 있는 경우: DRL/Human/LLM 가중치 결합 ---
         if arbitrator is not None and obs is not None:
             rl_weight_raw = arbitrator.authority(obs, drl_action, human_action)
             human_weight_raw = 1 - rl_weight_raw
@@ -180,6 +264,10 @@ class DRL(object):
         else:
             final_action = np.round(final_action).astype(int)
 
+        # --- [추가] Memory에 현재 step 저장 (Human 개입 여부와 무관하게) ---
+        if memory_module is not None and obs is not None:
+            print(f"[DEBUG][choose_action] step={obs.step_count}, speed={obs.ego_vehicle_state.speed:.2f}, lane_id={obs.ego_vehicle_state.lane_id}")
+            memory_module.save(obs, final_action, "-")
         return final_action, llm_action
 
     def learn_guidence(self, batch_size=64):
