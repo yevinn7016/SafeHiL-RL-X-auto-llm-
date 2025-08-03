@@ -12,6 +12,7 @@ import torch
 import torch.nn.functional as F
 from torch.optim import Adam
 import re
+import time
 
 
 from utils_ import soft_update, hard_update
@@ -19,7 +20,7 @@ from Network import GaussianPolicy, QNetwork, DeterministicPolicy
 from cpprb import PrioritizedReplayBuffer
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '../In-context_Learning_for_Automated_Driving/Auto_Driving_Highway'))
-from ask_llm import send_to_chatgpt
+from ask_llm import send_to_gemini
 
 # --- [추가] LLM 이산 action ID를 연속 action 벡터로 매핑하는 테이블 ---
 ACTIONS_ID_TO_VEC = {
@@ -134,7 +135,7 @@ class DRL(object):
             similar_cases = memory_module.retrieve_similar_cases(obs, k=3)
 
     # ✅ 간략 출력
-            print(f"[choose_action] LLM 프롬프트에 포함될 유사 사례 ({len(similar_cases)}건):")
+            #print(f"[choose_action] LLM 프롬프트에 포함될 유사 사례 ({len(similar_cases)}건):")
             for idx, case in enumerate(similar_cases, 1):
         # 문자열로 된 obs에서 step/speed/lane 같은 값 파싱 필요시 추가
         # 여기서는 action만 간략히 출력
@@ -150,13 +151,24 @@ class DRL(object):
             llm_conf = llm_conf_default
 
             if current_scenario is not None and sce is not None:
-                llm_result = send_to_chatgpt(drl_action, current_scenario, sce)
+                
+                llm_result = send_to_gemini(drl_action, current_scenario, sce)
+                time.sleep(0.1)  
+                
 
+            # ==== LLM 응답 간략 출력 ====
             if llm_result is not None and "content" in llm_result:
                 llm_text = llm_result["content"]
+    # JSON에서 decision만 추출
+                match = re.search(r'"decision":\s*{["\']?([^"\'}]+)["\']?}', llm_text)
+                llm_action_str = match.group(1) if match else "IDLE"
+                print("🧠 [LLM 응답] (결정만 출력)")
+                print(f"llm action: {llm_action_str}")
             else:
-                print("[ERROR] llm_result is None or missing 'content' key:", llm_result)
+                #print("[ERROR] llm_result is None or missing 'content' key")
                 llm_text = ""
+
+
 
             match = re.search(r'"decision":\s*{["\']?([^"\'}]+)["\']?}', llm_text)
             llm_action_str = match.group(1) if match else "IDLE"
@@ -202,10 +214,15 @@ class DRL(object):
                 final_action = np.round(final_action).astype(float)  # 연속 action space 유지
             # --- [추가] Memory에 현재 step 저장 (Human 개입 여부와 무관하게) ---
             if memory_module is not None and obs is not None:
-                print(f"[DEBUG][choose_action] calling memory_module.save | "
-      f"step={obs.step_count}, speed={obs.ego_vehicle_state.speed:.2f}, lane={obs.ego_vehicle_state.lane_id}")
-
-                memory_module.save(obs, final_action, "-")
+    # N step마다 저장
+                N = 10  # 원하는 step 간격
+                if obs.step_count % N == 0:
+                    #print(f"[DEBUG][choose_action] calling memory_module.save | "
+                        #f"step={obs.step_count}, speed={obs.ego_vehicle_state.speed:.2f}, lane={obs.ego_vehicle_state.lane_id}")
+                    
+                    memory_module.save(obs, final_action, "-")
+                    
+                        
             return final_action, llm_action
         # --- [기존] Human 개입이 있는 경우: DRL/Human/LLM 가중치 결합 ---
         if arbitrator is not None and obs is not None:
@@ -214,20 +231,36 @@ class DRL(object):
         else:
             rl_weight_raw, human_weight_raw = 0.5, 0.5
         last_action = drl_action
-        llm_result = send_to_chatgpt(last_action, current_scenario, sce)
+      
+        llm_result = send_to_gemini(last_action, current_scenario, sce)
+        time.sleep(0.1)  
+        # 2. Human action (입력값이 없으면 DRL+LLM 동적 가중치 결합)
+        if human_action is None:
+            # --- [변경] Human 개입이 없는 경우: DRL과 LLM 행동을 cosine similarity 기반으로 안전하게 결합 ---
+            llm_result = None
+            llm_action = drl_action
+            llm_conf = llm_conf_default
+
+            if current_scenario is not None and sce is not None:
+                
+                llm_result = send_to_gemini(drl_action, current_scenario, sce)
+                time.sleep(0.1)  
+                
         # 4. LLM action 및 confidence 계산
         llm_result = None
         llm_action = drl_action
         llm_conf = llm_conf_default
 
         if current_scenario is not None and sce is not None:
-            llm_result = send_to_chatgpt(drl_action, current_scenario, sce)
+          
+            llm_result = send_to_gemini(drl_action, current_scenario, sce)
+            time.sleep(0.1)  
 
         if llm_result is not None and "content" in llm_result:
             llm_text = llm_result["content"]
     # 정규표현식으로 decision/LLM confidence 추출
         else:
-            print("[ERROR] llm_result is None or missing 'content' key:", llm_result)
+            #print("[ERROR] llm_result is None or missing 'content' key:", llm_result)
             llm_text = ""
 
 
@@ -267,7 +300,7 @@ class DRL(object):
         # --- [추가] Memory에 현재 step 저장 (Human 개입 여부와 무관하게) ---
         if memory_module is not None and obs is not None:
             print(f"[DEBUG][choose_action] step={obs.step_count}, speed={obs.ego_vehicle_state.speed:.2f}, lane_id={obs.ego_vehicle_state.lane_id}")
-            memory_module.save(obs, final_action, "-")
+            
         return final_action, llm_action
 
     def learn_guidence(self, batch_size=64):

@@ -1,0 +1,176 @@
+ Retrying in 0.05 seconds
+./ego_vehicle.yaml
+[MemoryModule] Loaded ./db/chroma_memory/. Now the database has 21356 items.
+
+The object is: SAC 
+|Seed: 1 
+|VALUE_GUIDANCE: False 
+|PENALTY_GUIDANCE: False 
+
+
+ crashed
+
+|Epoc: 0 
+|Step: 20 
+|Collision: True 
+|Off Road: False 
+|Goal: False 
+|Off Route: False 
+|R: 2.470001853602894 
+|Algo: sac_speed 
+|seed: 4 
+|Env: straight
+
+..............................................
+1 Loop, Steps: 20, Avg Reward: 2.470002, Success No. : 0 
+..............................................
+
+|Epoc: 1 
+|Step: 298 
+|Collision: False 
+|Off Road: False 
+|Goal: False 
+|Off Route: False 
+|R: 2.512544157557194 
+|Algo: sac_speed 
+|seed: 4 
+|Env: straight
+
+..............................................
+2 Loop, Steps: 298, Avg Reward: 2.512544, Success No. : 1 
+..............................................
+
+|Epoc: 2 
+|Step: 298 
+|Collision: False 
+|Off Road: False 
+|Goal: False 
+|Off Route: False 
+|R: 7.308951355099871 
+|Algo: sac_speed 
+|seed: 4 
+|Env: straight
+
+..............................................
+3 Loop, Steps: 298, Avg Reward: 7.308951, Success No. : 2 
+..............................................
+
+|Epoc: 3 
+|Step: 298 
+|Collision: False 
+|Off Road: False 
+|Goal: False 
+|Off Route: False 
+|R: 0.5346695692776844 
+|Algo: sac_speed 
+|seed: 4 
+|Env: straight
+
+..............................................
+4 Loop, Steps: 298, Avg Reward: 0.534670, Success No. : 3 
+..............................................
+
+|Epoc: 4 
+|Step: 298 
+|Collision: False 
+|Off Road: False 
+|Goal: False 
+|Off Route: False 
+|R: 2.507863025023165 
+|Algo: sac_speed 
+|seed: 4 
+|Env: straight
+
+..............................................
+5 Loop, Steps: 298, Avg Reward: 2.507863, Success No. : 4 
+..............................................
+
+|Epoc: 5 
+|Step: 298 
+|Collision: False 
+|Off Road: False 
+|Goal: False 
+|Off Route: False 
+|R: 2.510499366201854 
+|Algo: sac_speed 
+|seed: 4 
+|Env: straight
+
+..............................................
+6 Loop, Steps: 298, Avg Reward: 2.510499, Success No. : 5 
+..............................................
+
+|Epoc: 6 
+|Step: 298 
+|Collision: False 
+|Off Road: False 
+|Goal: False 
+|Off Route: False 
+|R: 1.5304709617698282 
+|Algo: sac_speed 
+|seed: 4 
+|Env: straight
+
+..............................................
+7 Loop, Steps: 298, Avg Reward: 1.530471, Success No. : 6 
+..............................................
+
+ crashed
+
+|Epoc: 7 
+|Step: 273 
+|Collision: True 
+|Off Road: False 
+|Goal: False 
+|Off Route: False 
+|R: 7.324160327862415 
+|Algo: sac_speed 
+|seed: 4 
+|Env: straight
+
+..............................................
+8 Loop, Steps: 273, Avg Reward: 7.324160, Success No. : 6 
+..............................................
+
+|Epoc: 8 
+|Step: 298 
+|Collision: False 
+|Off Road: False 
+|Goal: False 
+|Off Route: False 
+|R: 2.5056056290843065 
+|Algo: sac_speed 
+|seed: 4 
+|Env: straight
+
+..............................................
+9 Loop, Steps: 298, Avg Reward: 2.505606, Success No. : 7 
+..............................................
+
+ crashed
+
+|Epoc: 9 
+|Step: 10 
+|Collision: True 
+|Off Road: False 
+|Goal: False 
+|Off Route: False 
+|R: 1.2975235659062014 
+|Algo: sac_speed 
+|seed: 4 
+|Env: straight
+
+..............................................
+10 Loop, Steps: 10, Avg Reward: 1.297524, Success No. : 7 
+..............................................
+
+..............................................
+Average Reward over 10 Evaluation Episodes, At Epoch: 10, Avg Reward:3.050229, Success No.: 7
+..............................................
+
+|Avg Speed: 3.4978236485385623 
+|Std Speed: 4.689949276368804 
+|Avg Dist: 31.337919054133664 
+|Std Dist: 22.84335565893002 
+|Avg Offset: 0.040988091911241455 
+|Std Offset: 0.08019388869776121

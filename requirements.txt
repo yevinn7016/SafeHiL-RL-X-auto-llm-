@@ -131,9 +131,10 @@ nvidia-nvtx-cu12==12.1.105
 oauthlib==3.3.1
 olefile @ file:///home/conda/feedstock_root/build_artifacts/olefile_1701735466804/work
 onnxruntime==1.19.2
-openai==0.28.0
-# langchain-google-genai==0.0.10  # (Gemini용, 미사용)
-# google-generativeai==0.4.1  # (Gemini용, 미사용)
+openai==0.28.0  # (이제 사용하지 않음, 필요시 삭제)
+# Gemini(Google Generative AI) 및 LangChain 연동 패키지 추가
+langchain-google-genai==0.0.10
+# google-generativeai==0.4.1  # (직접 Gemini API 쓸 경우, langchain-google-genai만으로 충분할 수 있음)
 opencv-python==4.1.2.30
 opencv-python-headless==4.1.2.30
 opentelemetry-api==1.33.1

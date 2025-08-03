@@ -1,13 +1,9 @@
 import numpy as np
 import json
-import openai
+import requests
+import os
 
 import pre_prompt
-
-# API 키 불러오기
-with open('MY_KEY.txt', 'r', encoding='utf-8-sig') as f:
-    api_key = f.read().strip()
-openai.api_key = api_key
 
 ACTIONS_ALL = {
     0: 'LANE_LEFT',
@@ -25,8 +21,8 @@ ACTIONS_DESCRIPTION = {
     4: 'decelerate the vehicle'
 }
 
-def send_to_chatgpt(last_action, current_scenario, sce):
-    print("=========================", type(last_action), "=========================")
+def send_to_llm_ollama(last_action, current_scenario, sce):
+    #print("=========================", type(last_action), "=========================")
     
     # ✅ DRL 행동 (last_action) 출력
     try:
@@ -53,41 +49,57 @@ def send_to_chatgpt(last_action, current_scenario, sce):
 
     frame = sce.get("frame", "Unknown")
     # 시스템 프롬프트 구성
-    system_prompt = (f"{message_prefix}"
-                     f"You, the 'ego' car, are now driving on a highway. You have already driven for {frame} seconds.\n"
-                     "There are several rules you need to follow when you drive on a highway:\n"
-                     f"{traffic_rules}\n\n"
-                     "Here are your attention points:\n"
-                     f"{decision_cautions}\n\n"
-                     "Once you make a final decision, output it in the following format:\n"
-                     "```\n"
-                     "Final Answer: \n"
-                     "    \"decision\": {\"<ego car's decision, ONE of the available actions>\"},\n"
-                     "```\n")
+    system_prompt = (
+    f"{message_prefix}"
+    f"You, the 'ego' car, are now driving on a highway. You have already driven for {frame} seconds.\n"
+    "There are several rules you need to follow when you drive on a highway:\n"
+    f"{traffic_rules}\n\n"
+    "Here are your attention points:\n"
+    f"{decision_cautions}\n\n"
+    "Available actions you can choose from are strictly limited to this list:\n"
+    "[LANE_LEFT, IDLE, LANE_RIGHT, FASTER, SLOWER]\n\n"
+    "Important:\n"
+    "- Do not answer in Chinese or any language other than English.\n"
+    "- Only output exactly one of the available actions.\n"
+    "- Do not output explanations or anything else.\n\n"
+    "Once you make a final decision, output it in the following exact format:\n"
+    "```\n"
+    "Final Answer:\n"
+    "    \"decision\": {\"<ONE of: LANE_LEFT, IDLE, LANE_RIGHT, FASTER, SLOWER>\"},\n"
+    "```"
+)
+
 
     user_prompt = (f"The decision made by the agent LAST time step was `{action_name}` ({action_description}).\n\n"
                    "Here is the current scenario:\n"
                    f"{current_scenario}\n\n")
 
-    # ChatCompletion 생성 (openai 방식)
-    completion = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ]
-    )
-    llm_result = completion.choices[0].message
-    llm_text = llm_result.content.strip()
+    # Ollama API 호출
+    prompt = system_prompt + "\n" + user_prompt
+    url = "http://172.24.128.1:11434/api/generate"
+    payload = {
+        "model": "qwen2:7b",
+        "prompt": prompt,
+        "stream": False
+    }
+    try:
+        response = requests.post(url, json=payload)
+        response.raise_for_status()
+        result = response.json()
+        llm_text = result.get("response", "").strip()
+    except Exception as e:
+        print("[ERROR] Ollama API 호출 실패:", e)
+        llm_text = ""
+        result = {"response": ""}
 
-# ✅ 응답 결과만 출력
-    print("\n🧠 [LLM 응답]")
-    print(json.dumps({"role": llm_result.role, "content": llm_text}, indent=2))
+    print("\n🧠 [LLM 응답 - 요약]")
 
-# (선택) 행동 이름 추출해서 추가 출력
     import re
     match = re.search(r'"decision":\s*{["\']?(\w+)["\']?}', llm_text)
     llm_action_str = match.group(1) if match else "IDLE"
     print("llm action:", llm_action_str)
-    return llm_result  
+    return result
+
+# 기존 send_to_gemini 함수와 동일한 인터페이스를 위해 alias 제공
+send_to_gemini = send_to_llm_ollama 
 

@@ -1,5 +1,5 @@
 SYSTEM_MESSAGE_PREFIX = """
-You are ChatGPT, a large language model trained by OpenAI. 
+You are Gemini, a large language model developed by Google. 
 You are now act as a mature driving assistant, who can give accurate and correct advice for human driver in complex urban driving scenarios. 
 The information in 'current scenario' :
 

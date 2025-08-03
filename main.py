@@ -7,7 +7,7 @@ Created on Thu Jun  8 16:02:04 2023
 """
 
 import os
-import gym
+import gym  # classic gym for SMARTS 0.6.1
 import sys
 import yaml
 import time
@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 
 sys.path.append('/home/oscar/Dropbox/SMARTS')
 from smarts.core.agent import AgentSpec
-from smarts.env.hiway_env import HiWayEnv
+from smarts.env.hiway_env import HiWayEnv  # SMARTS 0.6.1 classic import
 from smarts.core.controllers import ActionSpaceType
 from smarts.core.agent_interface import AgentInterface
 from smarts.core.agent_interface import NeighborhoodVehicles, RGB, OGM, DrivableAreaGridMap, Waypoints
@@ -38,6 +38,19 @@ from authority_allocation import Arbitrator
 import sys
 sys.path.append('./SMARTS')
 from memory_module import MemoryModule
+import sys
+import os
+from datetime import datetime
+
+# 로그 디렉토리 생성
+os.makedirs("logs", exist_ok=True)
+
+# 현재 시간 기반 로그 파일 이름
+log_filename = datetime.now().strftime("logs/log_%Y%m%d_%H%M%S.txt")
+
+# 표준 출력 로그 저장
+sys.stdout = open(log_filename, "w")
+sys.stderr = sys.stdout  # 에러 출력도 함께 저장하고 싶다면
 
 def plot_animation_figure(epoc):
     plt.figure()
@@ -80,22 +93,22 @@ def evaluate(env_eval, agent, eval_episodes=10, epoch=0):
     success = int(0)
     avg_reward_list = []
     lane_center = [-3.2, 0, 3.2]
-    
+
     v_list_avg = []
     offset_list_avg = []
     dist_list_avg = []
-    
+
     while ep < eval_episodes:
         obs = env_eval.reset()
         obs = obs[AGENT_ID]
         s = observation_adapter(obs)
         done = False
-        reward_total = 0.0 
+        reward_total = 0.0
         frame_skip = 5
-        
+
         action_list = deque(maxlen=1)
         action_list.append(np.array([0.0, 0.0]))
-        
+
         initial_pos = obs.ego_vehicle_state.position[:2]
         pos_list = deque(maxlen=5)
         pos_list.append(initial_pos)
@@ -108,132 +121,80 @@ def evaluate(env_eval, agent, eval_episodes=10, epoch=0):
         steer_list = []
 
         for t in count():
-            
             if t > MAX_NUM_STEPS:
                 print('Max Steps Done.')
                 break
-       
-            if t <= frame_skip:
-                ##### Select and perform an action #####
-                a, llm_action = agent.choose_action(np.array(s), action_list[-1], evaluate=True)
-                action = action_adapter(a)
-                
-                ##### Safety Mask #####
-                ego_state = obs.ego_vehicle_state
-                lane_id = ego_state.lane_index
-                if ego_state.speed >= obs.waypoint_paths[lane_id][0].speed_limit and\
-                   action[0] > 0.0:
-                        action = list(action)
-                        action[0] = 0.0
-                        action = tuple(action)
-                
-                action = {AGENT_ID:action}
-                next_state, reward, done, info = env_eval.step(action)
-                obs = next_state[AGENT_ID]
-                s_ = observation_adapter(next_state[AGENT_ID])
-                curr_pos = next_state[AGENT_ID].ego_vehicle_state.position[:2]
-                engage = int(0)
-                done = done[AGENT_ID]
-                if env_name == 'straight' and (curr_pos[0] - initial_pos[0]) > 200:
-                    done = True
-                    print('Done')
-                elif env_name == 'straight_with_turn' and (curr_pos[1] - initial_pos[1]) > 98:
-                    done = True
-                    print('Done')
-                
-                r = reward_adapter(next_state[AGENT_ID], pos_list, a, engage, done=done, llm_action=llm_action)
-                pos_list.append(next_state[AGENT_ID].ego_vehicle_state.position[:2])
-                action_list.append(a)       
-                s = s_
-                
-                l = ego_state.lane_position.t + lane_center[obs.ego_vehicle_state.lane_index]
-                s_list.append(ego_state.lane_position.s)
-                l_list.append(l)
-                v_list.append(ego_state.speed)
-                steer_list.append(a[-1])
-                
-                if done:
-                    s = env_eval.reset()                   
-                    reward_total = 0
-                    error = 0
-                    ep -= 1
-                    print("wtf?")
-                    break
-                continue
-       
-            ##### Select and perform an action ######
+
+            # ===== 선택 및 수행 =====
             a, llm_action = agent.choose_action(np.array(s), action_list[-1], evaluate=True)
-            entropy_rl = 0.0
-            guidance = False
-            
             action = action_adapter(a)
-            
-            ##### Safety Mask #####
+
+            # ===== 안전 마스크 =====
             ego_state = obs.ego_vehicle_state
             lane_id = ego_state.lane_index
-            if ego_state.speed >= obs.waypoint_paths[lane_id][0].speed_limit and\
-               action[0] > 0.0:
-                   action = list(action)
-                   action[0] = 0.0
-                   action = tuple(action)
-            
-            action = {AGENT_ID:action}
-            
-            ####### G29 Interface ######
-            # pygame.event.get()
-            # print('g29!')
-            # steering = 0
-            # if js.get_button(4):
-            #     steering = 0.1
-            #     if js.get_button(10):
-            #         steering *= 1.5
-            # elif js.get_button(5):
-            #     steering = -0.1
-            #     if js.get_button(11):
-            #         steering *= 1.5
-            # time.sleep(0.2)
-            # action = {AGENT_ID:((-js.get_axis(2)+1)/2,(-js.get_axis(3)+1)/2, steering)} # G29 test
-            # print(action)
-            
-            next_state, reward, done, info = env_eval.step(action)
-            obs = next_state[AGENT_ID]
-            s_ = observation_adapter(next_state[AGENT_ID])
-            curr_pos = next_state[AGENT_ID].ego_vehicle_state.position[:2]
-            print(next_state[AGENT_ID].ego_vehicle_state.speed)
+            if ego_state.speed >= obs.waypoint_paths[lane_id][0].speed_limit and action[0] > 0.0:
+                action = list(action)
+                action[0] = 0.0
+                action = tuple(action)
+
+            action = {AGENT_ID: action}
+            next_obs, reward, done, info = env_eval.step(action)
+
+            obs = next_obs[AGENT_ID]
+            s_ = observation_adapter(next_obs[AGENT_ID])
+            if isinstance(done, dict):
+                done = done.get(AGENT_ID, False)
+            curr_pos = next_obs[AGENT_ID].ego_vehicle_state.position[:2]
             engage = int(0)
-            done = done[AGENT_ID]
+
             if env_name == 'straight' and (curr_pos[0] - initial_pos[0]) > 200:
                 done = True
                 print('Done')
             elif env_name == 'straight_with_turn' and (curr_pos[1] - initial_pos[1]) > 98:
                 done = True
                 print('Done')
-            
-            r = reward_adapter(next_state[AGENT_ID], pos_list, a, engage, done=done, llm_action=llm_action)
-            pos_list.append(next_state[AGENT_ID].ego_vehicle_state.position[:2])
-       
-            lane_name = info[AGENT_ID]['env_obs'].ego_vehicle_state.lane_id
-            lane_id = info[AGENT_ID]['env_obs'].ego_vehicle_state.lane_index
-       
-            reward_total += r
+
+            if mode == 'evaluation':
+                r = reward_adapter(next_obs[AGENT_ID], pos_list, a, engage, done=done, llm_action=None)
+            else:
+                r = reward_adapter(next_obs[AGENT_ID], pos_list, a, engage, done=done, llm_action=llm_action)
+            pos_list.append(next_obs[AGENT_ID].ego_vehicle_state.position[:2])
             action_list.append(a)
             s = s_
-            
-            l = ego_state.lane_position.t + lane_center[ego_state.lane_index]
-            s_list.append(ego_state.lane_position.s)
+
+            # ===== 여기서 lateral offset 계산 변경 =====
+            ego_pos = ego_state.position[:2]
+            if lane_id < len(obs.waypoint_paths):
+                path = obs.waypoint_paths[lane_id]
+                if len(path) >= 2:
+                    ref_start = path[0].pos[:2]
+                    ref_end = path[1].pos[:2]
+                    ref_dir = ref_end - ref_start
+                    normal = np.array([-ref_dir[1], ref_dir[0]])
+                    normal = normal / (np.linalg.norm(normal) + 1e-6)
+                    lateral_offset = np.dot(ego_pos - ref_start, normal)
+                else:
+                    lateral_offset = 0.0
+            else:
+                lateral_offset = 0.0
+
+            # ===== 기존 리스트 저장 흐름 유지 =====
+            l = obs.ego_vehicle_state.lane_index
+            s_list.append(t)  # s 값 대신 step index 사용 (기존 lane_position.s 대신)
             l_list.append(l)
-            offset_list.append(abs(ego_state.lane_position.t))
+            offset_list.append(abs(lateral_offset))
             v_list.append(ego_state.speed)
             steer_list.append(a[-1])
-            
+
             if human.slow_down:
                 time.sleep(1/40)
-            
+
             if done:
                 if not info[AGENT_ID]['env_obs'].events.off_road and \
-                    not info[AGENT_ID]['env_obs'].events.collisions:
+                   not info[AGENT_ID]['env_obs'].events.collisions:
                     success += 1
-                
+
+                # ✅ 기존 출력문 그대로 유지
                 print('\n|Epoc:', ep,
                       '\n|Step:', t,
                       '\n|Collision:', bool(len(info[AGENT_ID]['env_obs'].events.collisions)),
@@ -244,30 +205,35 @@ def evaluate(env_eval, agent, eval_episodes=10, epoch=0):
                       '\n|Algo:', name,
                       '\n|seed:', seed,
                       '\n|Env:', env_name)
-                
+
+                # ✅ CSV 저장도 그대로
                 df["s"] = s_list
                 df["l"] = l_list
                 df["v"] = v_list
                 df["steer"] = steer_list
-                
-                df.to_csv('./store/' + env_name + '/data_%s_%s' % (name, ep) + '.csv', index=0)
-                
+                df.to_csv(f'./store/{env_name}/data_{name}_{ep}.csv', index=0)
+
                 break
-            
+
+            reward_total += r
+
         ep += 1
         v_list_avg.append(np.mean(v_list))
         offset_list_avg.append(np.mean(offset_list))
         dist_list_avg.append(curr_pos[0] - initial_pos[0])
         avg_reward_list.append(reward_total)
+
         print("\n..............................................")
-        print("%i Loop, Steps: %i, Avg Reward: %f, Success No. : %i " % (ep, t, reward_total, success))
+        print("%i Loop, Steps: %i, Avg Reward: %f, Success No. : %i " %
+              (ep, t, reward_total, success))
         print("..............................................")
 
     reward = statistics.mean(avg_reward_list)
     print("\n..............................................")
-    print("Average Reward over %i Evaluation Episodes, At Epoch: %i, Avg Reward:%f, Success No.: %i" % (eval_episodes, ep, reward, success))
+    print("Average Reward over %i Evaluation Episodes, At Epoch: %i, Avg Reward:%f, Success No.: %i" %
+          (eval_episodes, ep, reward, success))
     print("..............................................")
-        
+
     return reward, v_list_avg, offset_list_avg, dist_list_avg, avg_reward_list
 
 # observation space
@@ -400,13 +366,13 @@ def construct_sce(obs):
     }
 
 
-def interaction(COUNTER):
+def interaction(COUNTER, start_epoc=1):
     save_threshold = 3.0
     trigger_reward = 3.0
-    trigger_epoc = 400
+    trigger_epoc = 1
     saved_epoc = 1
-    epoc = 0
-    pbar = tqdm(total=MAX_NUM_EPOC)
+    epoc = start_epoc
+    pbar = tqdm(total=MAX_NUM_EPOC, initial=start_epoc)
     
     while epoc <= MAX_NUM_EPOC:
         reward_total = 0.0 
@@ -421,8 +387,18 @@ def interaction(COUNTER):
         intermittent_threshold = 300
         
         pos_list = deque(maxlen=5)
-        obs = env.reset()
-        obs = obs[AGENT_ID]
+        obs = env.reset()  # SMARTS 0.6.1: reset returns obs only
+        if isinstance(obs, tuple):
+            obs, info = obs
+        else:
+            
+            info = {}
+
+# 🔥 여기 추가: obs가 dict면 AGENT_ID로 꺼내기
+        if isinstance(obs, dict):
+    # 보통 AGENT_ID는 main.py 위쪽이나 상단에 정의돼 있을 거예요.
+    # 예: AGENT_ID = "Agent-007"
+            obs = obs.get(AGENT_ID)
         initial_pos = obs.ego_vehicle_state.position[:2]
         pos_list.append(initial_pos)
         s = observation_adapter(obs)
@@ -487,12 +463,15 @@ def interaction(COUNTER):
                    action = tuple(action)
                        
             action = {AGENT_ID:action}
-            next_state, reward, done, info = env.step(action)
-            obs = next_state[AGENT_ID]
+            next_obs, reward, done, info = env.step(action)  # SMARTS 0.6.1: step returns obs, reward, done, info
+
+            obs = next_obs[AGENT_ID]
             s_ = observation_adapter(obs)
-            curr_pos = next_state[AGENT_ID].ego_vehicle_state.position[:2]
+            if isinstance(done, dict):
+                done = done.get(AGENT_ID, False)
+            curr_pos = next_obs[AGENT_ID].ego_vehicle_state.position[:2]
             
-            done = done[AGENT_ID]
+           
             if env_name == 'straight' and (curr_pos[0] - initial_pos[0]) > 200:
                 done = True
                 print('Done')
@@ -500,7 +479,7 @@ def interaction(COUNTER):
                 done = True
                 print('Done')
             
-            r = reward_adapter(next_state[AGENT_ID], pos_list, a, engage=engage, done=done, llm_action=llm_action)
+            r = reward_adapter(next_obs[AGENT_ID], pos_list, a, engage=engage, done=done, llm_action=llm_action)
             pos_list.append(curr_pos)
 
             ##### Store the transition in memory ######
@@ -518,34 +497,70 @@ def interaction(COUNTER):
             if human.slow_down:
                 time.sleep(1/40)
 
+           
+
             if done:
-                epoc += 1
-                if epoc > THRESHOLD:
-                    reward_list.append(max(-15.0, reward_total))
-                    reward_mean_list.append(np.mean(reward_list[-10:]))
-                
+                    epoc += 1
+                    interrupt_checkpoint = {
+                    'epoc': epoc,
+                    'policy_state': agent.policy.state_dict(),
+                    'critic_state': agent.critic.state_dict(),
+                    'optimizer_policy': agent.policy_optim.state_dict(),
+                    'optimizer_critic': agent.critic_optim.state_dict(),
+                }
+                    torch.save(
+                    interrupt_checkpoint,
+                    os.path.join('trained_network', env_name, f'{name}_checkpoint_interrupt.pth')
+                )
+                    print(f"[INFO] 💾 Interrupt checkpoint 저장 완료 (epoc={epoc})")
+                    if epoc > THRESHOLD:
+                            reward_list.append(max(-15.0, reward_total))
+                            reward_mean_list.append(np.mean(reward_list[-10:]))
+                    import pandas as pd
+
+                    df = pd.DataFrame({
+                        "epoc": list(range(start_epoc, epoc + 1)),
+                        "reward": reward_list,
+                        "mean_reward": reward_mean_list
+                    })
+                    df.to_csv(f"reward_logs/reward_trace_epoc{epoc}.csv", index=False)
                     ###### Evaluating the performance of current model ######
+                    # ✅ 저장 조건 2) 보상 평균 기반 저장
                     if reward_mean_list[-1] >= trigger_reward and epoc > trigger_epoc:
-                        # trigger_reward = reward_mean_list[-1]
                         print("Evaluating the Performance.")
                         avg_reward, _, _, _, _ = evaluate(env, agent, EVALUATION_EPOC)
                         trigger_reward = avg_reward
                         if avg_reward > save_threshold:
                             print('Save the model at %i epoch, reward is: %f' % (epoc, avg_reward))
                             saved_epoc = epoc
-                            
+                            # 보상 기반 저장
                             torch.save(agent.policy.state_dict(), os.path.join('trained_network/' + env_name,
-                                      name+'_memo'+str(MEMORY_CAPACITY)+'_epoc'+
-                                      str(MAX_NUM_EPOC) + '_step' + str(MAX_NUM_STEPS) + '_seed'
-                                      + str(seed)+'_'+env_name+'_actornet.pkl'))
+                                      f"{name}_reward_epoc{epoc}_actornet.pkl"))
                             torch.save(agent.critic.state_dict(), os.path.join('trained_network/' + env_name,
-                                      name+'_memo'+str(MEMORY_CAPACITY)+'_epoc'+
-                                      str(MAX_NUM_EPOC) + '_step' + str(MAX_NUM_STEPS) + '_seed'
-                                      + str(seed)+'_'+env_name+'_criticnet.pkl'))
+                                      f"{name}_reward_epoc{epoc}_criticnet.pkl"))
+                            # === checkpoint 저장 ===
+                            checkpoint = {
+                                'epoc': epoc,
+                                'policy_state': agent.policy.state_dict(),
+                                'critic_state': agent.critic.state_dict(),
+                                'optimizer_policy': agent.policy_optim.state_dict(),
+                                'optimizer_critic': agent.critic_optim.state_dict(),
+                            }
+                            torch.save(checkpoint, os.path.join('trained_network/' + env_name, f'{name}_checkpoint_epoc{epoc}.pth'))
                             save_threshold = avg_reward
-                guidance_rate = 100 * guidance_count / (t + 1)
 
-                print('\n|Epoc:', epoc,
+                    always_checkpoint = {
+        'epoc': epoc,
+        'policy_state': agent.policy.state_dict(),
+        'critic_state': agent.critic.state_dict(),
+        'optimizer_policy': agent.policy_optim.state_dict(),
+        'optimizer_critic': agent.critic_optim.state_dict(),
+    }
+                    torch.save(always_checkpoint, os.path.join('trained_network', env_name, f"{name}_checkpoint_epoc{epoc}.pth"))
+                    print(f"[INFO] 💾 항상 저장: {name}_checkpoint_epoc{epoc}.pth")
+                    guidance_rate = 100 * guidance_count / (t + 1)
+
+                    print('\n|Epoc:', epoc,
                       '\n|Step:', t,
                       '\n|Goal:', info[AGENT_ID]['env_obs'].events.reached_goal,
                       '\n|Guidance Rate:', guidance_rate, '%',
@@ -558,24 +573,39 @@ def interaction(COUNTER):
                       '\n|Algo:', name,
                       '\n|seed:', seed,
                       '\n|Env:', env_name)
-                obs = env.reset()          # ✅ dict로 받아서
-                obs = obs[AGENT_ID]  
-                s = observation_adapter(obs) 
-                reward_total = 0
-                error = 0
-                pbar.update(1)
-                break
-        
-        # if epoc % PLOT_INTERVAL == 0:
-        #     plot_animation_figure(saved_epoc)
-    
-        if (epoc % SAVE_INTERVAL == 0):
-            np.save(os.path.join('store/' + env_name, 'reward_memo'+str(MEMORY_CAPACITY) +
-                                      '_epoc'+str(MAX_NUM_EPOC)+'_step' + str(MAX_NUM_STEPS) +
-                                      '_seed'+ str(seed) +'_'+env_name+'_' + name),
-                    [reward_mean_list], allow_pickle=True, fix_imports=True)
+                    obs = env.reset()
+# info가 필요하다면 아래처럼 추가
+                    info = {}
+                    obs = obs[AGENT_ID]  
+                    s = observation_adapter(obs) 
+                    reward_total = 0
+                    error = 0
+                    pbar.update(1)
+                    break
             
-            pass
+        if epoc % PLOT_INTERVAL == 0:
+             plot_animation_figure(saved_epoc)
+    
+        
+
+        # 💡 이어서 학습(resume training)용 예시 (필요시 활성화)
+        # checkpoint = {
+        #     'epoc': epoc,
+        #     'policy_state': agent.policy.state_dict(),
+        #     'critic_state': agent.critic.state_dict(),
+        #     'optimizer_policy': agent.policy_optim.state_dict(),
+        #     'optimizer_critic': agent.critic_optim.state_dict(),
+        # }
+        # torch.save(checkpoint, os.path.join('trained_network/' + env_name, f'{name}_checkpoint_epoc{epoc}.pth'))
+        #
+        # 불러올 때:
+        # checkpoint = torch.load(PATH)
+        # agent.policy.load_state_dict(checkpoint['policy_state'])
+        # agent.critic.load_state_dict(checkpoint['critic_state'])
+        # agent.policy_optim.load_state_dict(checkpoint['optimizer_policy'])
+        # agent.critic_optim.load_state_dict(checkpoint['optimizer_critic'])
+        # epoc = checkpoint['epoc']
+
     pbar.close()
     print('Complete')
     return save_threshold
@@ -591,6 +621,7 @@ if __name__ == "__main__":
     yaml_path = os.path.join(path, 'config.yaml')
     with open(yaml_path) as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
+        
     
     ##### Individual parameters for each model ######
     model = 'SAC'
@@ -693,14 +724,14 @@ if __name__ == "__main__":
         
         scenario_path = [scenario]
         
-
+        
         env = HiWayEnv(
     scenarios=scenario_path,
     agent_specs={AGENT_ID: agent_spec},
     headless=False,
     visdom=False,
     sumo_headless=True,
-    seed=seed,
+    seed=seed, 
     
 )
 
@@ -710,7 +741,7 @@ if __name__ == "__main__":
         env.agent_id = AGENT_ID
         env.seed = seed
 
-        obs = env.reset()
+        obs = env.reset()  # SMARTS 0.6.1: reset returns obs only
         img_h, img_w, channel = screen_size, screen_size, 9
         physical_state_dim = 2
         n_obs = img_h * img_w * channel
@@ -743,42 +774,69 @@ if __name__ == "__main__":
         
         success_count = 0
 
+        # === 이어서 학습(Resume) 관련 설정 ===
+        RESUME = True  # 이어서 학습하지 않고 처음부터 시작
+        CHECKPOINT_PATH = "trained_network/straight/sac_speed_checkpoint_epoc821.pth"  
+        start_epoc = 1
+
+        
+        #### pkl 파일 평가 코드 ####
+        #### pth 파일 평가 코드 ####
+        #### pkl 파일 평가 코드 ####
         if mode == 'evaluation':
-            name = 'sac'
-            environment_name = 'straight'
-            max_epoc = 820
-            max_steps = 300
-            seed = 4
-            directory = 'trained_network/' + environment_name
-            # directory =  'best_candidate'
-            filename = name+'_memo'+str(MEMORY_CAPACITY)+'_epoc'+ \
-                      str(max_epoc) + '_step' + str(max_steps) + \
-                      '_seed' + str(seed) + '_' + environment_name
-                      
-            agent.policy.load_state_dict(torch.load('%s/%s_actornet.pkl' % (directory, filename)))
-            agent.policy.eval()
-            reward, v_list_avg, offset_list_avg, dist_list_avg, avg_reward_list = evaluate(env, agent, eval_episodes=10)
-            
-            print('\n|Avg Speed:', np.mean(v_list_avg),
-                  '\n|Std Speed:', np.std(v_list_avg),
-                  '\n|Avg Dist:', np.mean(dist_list_avg),
-                  '\n|Std Dist:', np.std(dist_list_avg),
-                  '\n|Avg Offset:', np.mean(offset_list_avg),
-                  '\n|Std Offset:', np.std(offset_list_avg))
+                    name = 'sac'
+                    environment_name = 'straight'
+                    max_epoc = 820
+                    max_steps = 300
+                    seed = 4
+                    directory = 'trained_network/' + environment_name
+                    # directory =  'best_candidate'
+                    filename = 'sac_speed_reward_epoc532'
+                    agent.policy.load_state_dict(torch.load(f'{directory}/{filename}_actornet.pkl'))
+                    agent.policy.eval()
+                    reward, v_list_avg, offset_list_avg, dist_list_avg, avg_reward_list = evaluate(env, agent, eval_episodes=10)
+                    
+                    print('\n|Avg Speed:', np.mean(v_list_avg),
+                        '\n|Std Speed:', np.std(v_list_avg),
+                        '\n|Avg Dist:', np.mean(dist_list_avg),
+                        '\n|Std Dist:', np.std(dist_list_avg),
+                        '\n|Avg Offset:', np.mean(offset_list_avg),
+                        '\n|Std Offset:', np.std(offset_list_avg))
+
 
         else:
-            save_threshold = interaction(success_count)
-        
-            np.save(os.path.join('store/' + env_name, 'reward_memo'+str(MEMORY_CAPACITY) +
-                                      '_epoc'+str(MAX_NUM_EPOC)+'_step' + str(MAX_NUM_STEPS) +
-                                      '_seed'+ str(seed) +'_'+env_name+'_' + name),
-                    [reward_mean_list], allow_pickle=True, fix_imports=True)
-    
-            torch.save(agent.policy.state_dict(), os.path.join('trained_network/' + env_name,
-                      name+'_memo'+str(MEMORY_CAPACITY)+'_epoc'+
-                      str(MAX_NUM_EPOC) + '_step' + str(MAX_NUM_STEPS) + '_seed'
-                      + str(seed)+'_'+env_name+'_actornet_final.pkl'))
-            torch.save(agent.critic.state_dict(), os.path.join('trained_network/' + env_name,
-                      name+'_memo'+str(MEMORY_CAPACITY)+'_epoc'+
-                      str(MAX_NUM_EPOC) + '_step' + str(MAX_NUM_STEPS) + '_seed'
-                      + str(seed)+'_'+env_name+'_criticnet_final.pkl'))
+           
+            try:
+                # === 이어서 학습(Resume) ===
+                if RESUME and os.path.exists(CHECKPOINT_PATH):
+                    checkpoint = torch.load(CHECKPOINT_PATH)
+                    agent.policy.load_state_dict(checkpoint['policy_state'])
+                    agent.critic.load_state_dict(checkpoint['critic_state'])
+                    agent.policy_optim.load_state_dict(checkpoint['optimizer_policy'])
+                    agent.critic_optim.load_state_dict(checkpoint['optimizer_critic'])
+                    start_epoc = checkpoint['epoc']
+                    print(f"[Resume] Checkpoint에서 epoc={start_epoc}부터 이어서 학습합니다.")
+
+                # 🚀 그냥 interaction 호출
+                save_threshold = interaction(success_count, start_epoc=start_epoc)
+
+            except KeyboardInterrupt:
+                print("\n[INFO] KeyboardInterrupt 발생! 현재 모델을 안전 저장합니다...")
+                checkpoint = {
+                    'epoc': start_epoc,  # 현재 진행된 epoc을 넣어도 됩니다. interaction 내에서 최신 값 넘겨도 좋습니다.
+                    'policy_state': agent.policy.state_dict(),
+                    'critic_state': agent.critic.state_dict(),
+                    'optimizer_policy': agent.policy_optim.state_dict(),
+                    'optimizer_critic': agent.critic_optim.state_dict(),
+                }
+                torch.save(checkpoint, os.path.join('trained_network', env_name, f"{name}_checkpoint_interrupt.pth"))
+                print("[INFO] 안전 저장 완료! 프로그램을 종료합니다.")
+                torch.save(agent.policy.state_dict(),
+                    os.path.join('trained_network', env_name,
+                                    f"{name}_reward_epoc{start_epoc}_actornet.pkl"))
+                torch.save(agent.critic.state_dict(),
+                    os.path.join('trained_network', env_name,
+                                    f"{name}_reward_epoc{start_epoc}_criticnet.pkl"))
+                print("[INFO] ✅ Interrupt 시점 actornet/criticnet 저장 완료")
+
+                print("[INFO] 프로그램을 종료합니다.")

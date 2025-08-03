@@ -1,0 +1,1039 @@
+./ego_vehicle.yaml
+[MemoryModule] Loaded ./db/chroma_memory/. Now the database has 21356 items.
+
+The object is: SAC 
+|Seed: 1 
+|VALUE_GUIDANCE: False 
+|PENALTY_GUIDANCE: False 
+
+
+|Epoc: 0 
+|Step: 298 
+|Collision: False 
+|Off Road: False 
+|Goal: False 
+|Off Route: False 
+|R: -15.435092727099866 
+|Algo: sac 
+|seed: 4 
+|Env: straight
+
+..............................................
+1 Loop, Steps: 298, Avg Reward: -15.435093, Success No. : 1 
+..............................................
+
+|Epoc: 1 
+|Step: 298 
+|Collision: False 
+|Off Road: False 
+|Goal: False 
+|Off Route: False 
+|R: -0.9232517807048402 
+|Algo: sac 
+|seed: 4 
+|Env: straight
+
+..............................................
+2 Loop, Steps: 298, Avg Reward: -0.923252, Success No. : 2 
+..............................................
+
+|Epoc: 2 
+|Step: 298 
+|Collision: False 
+|Off Road: False 
+|Goal: False 
+|Off Route: False 
+|R: -14.599564102007236 
+|Algo: sac 
+|seed: 4 
+|Env: straight
+
+..............................................
+3 Loop, Steps: 298, Avg Reward: -14.599564, Success No. : 3 
+..............................................
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+|Epoc: 3 
+|Step: 298 
+|Collision: False 
+|Off Road: False 
+|Goal: False 
+|Off Route: False 
+|R: -33.51077334166212 
+|Algo: sac 
+|seed: 4 
+|Env: straight
+
+..............................................
+4 Loop, Steps: 298, Avg Reward: -33.510773, Success No. : 4 
+..............................................
+
+|Epoc: 4 
+|Step: 298 
+|Collision: False 
+|Off Road: False 
+|Goal: False 
+|Off Route: False 
+|R: -2.4354979157138654 
+|Algo: sac 
+|seed: 4 
+|Env: straight
+
+..............................................
+5 Loop, Steps: 298, Avg Reward: -2.435498, Success No. : 5 
+..............................................
+
+|Epoc: 5 
+|Step: 298 
+|Collision: False 
+|Off Road: False 
+|Goal: False 
+|Off Route: False 
+|R: -15.55473734523399 
+|Algo: sac 
+|seed: 4 
+|Env: straight
+
+..............................................
+6 Loop, Steps: 298, Avg Reward: -15.554737, Success No. : 6 
+..............................................
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ on_shoulder
+
+ crashed
+
+ on_shoulder
+
+|Epoc: 6 
+|Step: 144 
+|Collision: True 
+|Off Road: False 
+|Goal: False 
+|Off Route: False 
+|R: -21.07511125783563 
+|Algo: sac 
+|seed: 4 
+|Env: straight
+
+..............................................
+7 Loop, Steps: 144, Avg Reward: -21.075111, Success No. : 6 
+..............................................
+
+|Epoc: 7 
+|Step: 298 
+|Collision: False 
+|Off Road: False 
+|Goal: False 
+|Off Route: False 
+|R: -1.6585837103193204 
+|Algo: sac 
+|seed: 4 
+|Env: straight
+
+..............................................
+8 Loop, Steps: 298, Avg Reward: -1.658584, Success No. : 7 
+..............................................
+
+|Epoc: 8 
+|Step: 298 
+|Collision: False 
+|Off Road: False 
+|Goal: False 
+|Off Route: False 
+|R: -15.565025972554771 
+|Algo: sac 
+|seed: 4 
+|Env: straight
+
+..............................................
+9 Loop, Steps: 298, Avg Reward: -15.565026, Success No. : 8 
+..............................................
+
+|Epoc: 9 
+|Step: 298 
+|Collision: False 
+|Off Road: False 
+|Goal: False 
+|Off Route: False 
+|R: -4.071919615321518 
+|Algo: sac 
+|seed: 4 
+|Env: straight
+
+..............................................
+10 Loop, Steps: 298, Avg Reward: -4.071920, Success No. : 9 
+..............................................
+
+..............................................
+Average Reward over 10 Evaluation Episodes, At Epoch: 10, Avg Reward:-12.482956, Success No.: 9
+..............................................
+
+|Avg Speed: 0.23070031745150063 
+|Std Speed: 0.1565794488248541 
+|Avg Dist: 4.884462341358258 
+|Std Dist: 2.686840775609327 
+|Avg Offset: 0.9853378594387274 
+|Std Offset: 0.5465683920953671

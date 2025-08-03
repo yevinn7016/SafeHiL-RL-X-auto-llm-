@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/mnt/c/Users/yebin/PycharmProjects/Project/safehil-rl X autollm/SafeHiL-RL-X-auto-llm-/main.py", line 624, in <module>
+    print(f"[DEBUG] mode 값: {mode}") 
+NameError: name 'mode' is not defined
